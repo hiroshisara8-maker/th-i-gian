@@ -1,0 +1,6 @@
+{
+  "name": "Quản Lý Sinh Hoạt Cá Nhân",
+  "description": "Ứng dụng quản lý lịch học, công việc, thời khóa biểu, nhắc nhở và chi tiêu cá nhân với giao diện màu nhạt hài hòa.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
