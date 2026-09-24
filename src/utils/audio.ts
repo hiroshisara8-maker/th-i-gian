@@ -253,3 +253,97 @@ export function playSoftChime(soundType: ChimeSoundType = 'bell', volume: number
     }
   });
 }
+
+// Active Ringing Controller
+let activeRingingTimer: number | null = null;
+let activeCountdownTimer: number | null = null;
+let activeStopTimeout: number | null = null;
+let currentlyRinging = false;
+let onRingingStopCallback: (() => void) | null = null;
+let onTickCallback: ((remainingSec: number) => void) | null = null;
+
+/**
+ * Checks whether the alarm chime is currently actively ringing
+ */
+export function isCurrentlyRinging(): boolean {
+  return currentlyRinging;
+}
+
+/**
+ * Stops any actively ringing chime sequence immediately
+ */
+export function stopRinging(): void {
+  if (activeRingingTimer !== null) {
+    clearInterval(activeRingingTimer);
+    activeRingingTimer = null;
+  }
+  if (activeCountdownTimer !== null) {
+    clearInterval(activeCountdownTimer);
+    activeCountdownTimer = null;
+  }
+  if (activeStopTimeout !== null) {
+    clearTimeout(activeStopTimeout);
+    activeStopTimeout = null;
+  }
+
+  const wasRinging = currentlyRinging;
+  currentlyRinging = false;
+
+  if (wasRinging && onRingingStopCallback) {
+    const cb = onRingingStopCallback;
+    onRingingStopCallback = null;
+    cb();
+  } else {
+    onRingingStopCallback = null;
+  }
+  onTickCallback = null;
+}
+
+/**
+ * Starts continuous alarm ringing for the specified duration (in seconds)
+ * durationSeconds = 0 means ring continuously until user stops it
+ */
+export async function startRinging(
+  soundType: ChimeSoundType = 'bell',
+  volume: number = 0.8,
+  durationSeconds: number = 15,
+  onStop?: () => void,
+  onTick?: (remainingSec: number) => void
+): Promise<void> {
+  // If already ringing, stop old instance
+  stopRinging();
+
+  await unlockAudio();
+  currentlyRinging = true;
+  onRingingStopCallback = onStop || null;
+  onTickCallback = onTick || null;
+
+  // Play immediately
+  playSoftChime(soundType, volume);
+
+  // Play repeatedly every 2.4s so it sounds like a true alarm clock
+  activeRingingTimer = window.setInterval(() => {
+    if (!currentlyRinging) return;
+    playSoftChime(soundType, volume);
+  }, 2400);
+
+  if (durationSeconds > 0) {
+    let remaining = durationSeconds;
+    if (onTickCallback) onTickCallback(remaining);
+
+    activeCountdownTimer = window.setInterval(() => {
+      remaining -= 1;
+      if (onTickCallback) onTickCallback(Math.max(0, remaining));
+      if (remaining <= 0) {
+        stopRinging();
+      }
+    }, 1000);
+
+    activeStopTimeout = window.setTimeout(() => {
+      stopRinging();
+    }, durationSeconds * 1000);
+  } else {
+    // 0 means continuous, emit 0
+    if (onTickCallback) onTickCallback(0);
+  }
+}

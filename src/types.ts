@@ -21,10 +21,12 @@ export interface SoundSettings {
   enabled: boolean;
   volume: number; // 0.1 to 1.0
   soundType: ChimeSoundType;
-  defaultMinutesBefore: number; // default 10 minutes
-  notifyTimetable: boolean; // Báo trước 10 phút vào học
-  notifyTasks: boolean;     // Báo trước 10 phút hạn nộp bài / công việc
-  notifyEvents: boolean;    // Báo trước 10 phút sự kiện sinh hoạt
+  defaultMinutesBefore: number; // Thời gian báo trước (0, 5, 10, 15, 30, 60 phút)
+  ringDuration: number; // Thời lượng chuông reo tính bằng giây (5, 10, 15, 30, 60 hoặc 0 = reo liên tục)
+  snoozeMinutes: number; // Thời gian báo lại sau khi tạm hoãn (mặc định 5 phút)
+  notifyTimetable: boolean; // Báo trước giờ vào học
+  notifyTasks: boolean;     // Báo trước hạn nộp bài / công việc
+  notifyEvents: boolean;    // Báo trước sự kiện sinh hoạt
 }
 
 export type TaskCategory = 'hoc_tap' | 'cong_viec' | 'ca_nhan' | 'sinh_hoat';

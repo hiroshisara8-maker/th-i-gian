@@ -7,15 +7,17 @@ import {
   Clock, 
   Sparkles, 
   Calendar, 
-  BookOpen,
-  CheckCircle2,
-  AlertCircle,
-  Play,
-  Sliders,
-  CheckSquare
+  BookOpen, 
+  CheckCircle2, 
+  AlertCircle, 
+  Play, 
+  Sliders, 
+  CheckSquare,
+  Timer,
+  Square
 } from 'lucide-react';
 import { NotificationAlert, TaskItem, TimetableItem, RoutineEvent, SoundSettings, ChimeSoundType } from '../types';
-import { playSoftChime, unlockAudio } from '../utils/audio';
+import { playSoftChime, unlockAudio, startRinging, stopRinging } from '../utils/audio';
 import { getDayOfWeekNumber, getTodayDateString } from '../utils/helpers';
 import { sendSystemAlert } from '../utils/systemNotification';
 
@@ -57,9 +59,41 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
     { id: 'marimba', label: 'Mộc cầm (Marimba)', desc: 'Âm thanh gõ gỗ ấm áp, thư thái' },
   ];
 
+  const [isRingingTest, setIsRingingTest] = useState(false);
+  const [testRemainingSec, setTestRemainingSec] = useState(0);
+
   const handleTestSound = async (type?: ChimeSoundType) => {
+    if (isRingingTest) {
+      stopRinging();
+      setIsRingingTest(false);
+    }
     await unlockAudio();
     playSoftChime(type || soundSettings.soundType, soundSettings.volume);
+  };
+
+  const handleToggleRingDurationTest = async () => {
+    if (isRingingTest) {
+      stopRinging();
+      setIsRingingTest(false);
+      return;
+    }
+
+    setIsRingingTest(true);
+    await unlockAudio();
+    const duration = soundSettings.ringDuration !== undefined ? soundSettings.ringDuration : 15;
+    setTestRemainingSec(duration);
+
+    startRinging(
+      soundSettings.soundType,
+      soundSettings.volume,
+      duration,
+      () => {
+        setIsRingingTest(false);
+      },
+      (remaining) => {
+        setTestRemainingSec(remaining);
+      }
+    );
   };
 
   const handleRequestPermission = async () => {
@@ -242,10 +276,70 @@ export const NotificationModal: React.FC<NotificationModalProps> = ({
                   </div>
                 </div>
 
+                {/* Ring Duration and Lead Time Settings */}
+                <div className="pt-2 border-t border-amber-200/50 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-stone-700 flex items-center gap-1">
+                      <Timer className="w-3.5 h-3.5 text-amber-800" />
+                      Thời lượng chuông reo:
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {isRingingTest ? (
+                        <button
+                          type="button"
+                          onClick={handleToggleRingDurationTest}
+                          className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-[11px] font-bold flex items-center gap-1"
+                        >
+                          <Square className="w-2.5 h-2.5 fill-current" />
+                          <span>Dừng ({testRemainingSec}s)</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleToggleRingDurationTest}
+                          className="px-2 py-0.5 bg-amber-700 hover:bg-amber-800 text-white rounded text-[11px] font-medium flex items-center gap-1"
+                        >
+                          <Play className="w-2.5 h-2.5" />
+                          <span>Thử reo</span>
+                        </button>
+                      )}
+                      <span className="text-amber-900 font-bold bg-amber-100/70 px-1.5 py-0.5 rounded border border-amber-300 text-[11px]">
+                        {soundSettings.ringDuration > 0 ? `${soundSettings.ringDuration}s` : 'Liên tục'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                    {[
+                      { val: 5, label: '5s' },
+                      { val: 10, label: '10s' },
+                      { val: 15, label: '15s (Chuẩn)' },
+                      { val: 30, label: '30s' },
+                      { val: 60, label: '1p' },
+                      { val: 0, label: 'Liên tục' },
+                    ].map((d) => {
+                      const isSelected = soundSettings.ringDuration === d.val;
+                      return (
+                        <button
+                          key={d.val}
+                          type="button"
+                          onClick={() => onUpdateSoundSettings({ ...soundSettings, ringDuration: d.val })}
+                          className={`py-1 px-1.5 rounded text-[11px] font-medium border text-center transition-colors ${
+                            isSelected
+                              ? 'bg-amber-700 text-white border-amber-700'
+                              : 'bg-white text-stone-700 border-stone-200 hover:bg-amber-50'
+                          }`}
+                        >
+                          {d.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Categories applied */}
                 <div className="pt-2 border-t border-amber-200/50 space-y-1.5">
                   <label className="block text-xs font-semibold text-stone-700">
-                    Kích hoạt chuông trước 10 phút cho:
+                    Kích hoạt chuông thông báo cho:
                   </label>
                   <div className="flex flex-wrap gap-2 text-xs">
                     <label className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-stone-200 cursor-pointer">
